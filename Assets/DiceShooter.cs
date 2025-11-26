@@ -33,8 +33,15 @@ public class DiceShooter : MonoBehaviour
 
 void Update()
 {
+    // Only allow starting a drag if we can roll
     if (Input.GetMouseButtonDown(0))
     {
+        // Check if rolling is allowed before starting drag
+        if (CrapsGameManager.Instance != null && !CrapsGameManager.Instance.CanRoll())
+        {
+            return; // Don't allow drag if can't roll
+        }
+
         Debug.Log("Mouse down!");
         dragStart = Camera.main.ScreenToWorldPoint(Input.mousePosition);
         isDragging = true;
@@ -48,6 +55,14 @@ void Update()
 
     if (Input.GetMouseButtonUp(0) && isDragging)
     {
+        // Double-check we can still roll (in case state changed during drag)
+        if (CrapsGameManager.Instance != null && !CrapsGameManager.Instance.CanRoll())
+        {
+            ClearLine();
+            isDragging = false;
+            return;
+        }
+
         Vector2 dragEnd = Camera.main.ScreenToWorldPoint(Input.mousePosition);
         Vector2 direction = (dragStart - dragEnd).normalized;
         float power = (dragStart - dragEnd).magnitude * powerMultiplier;
@@ -60,6 +75,12 @@ void Update()
 
     void ShootDice(Vector2 direction, float power)
     {
+        // Notify CrapsGameManager that a roll has started
+        if (CrapsGameManager.Instance != null)
+        {
+            CrapsGameManager.Instance.OnRollStarted();
+        }
+
         for (int i = 0; i < diceCount; i++)
         {
             Vector2 offset = new Vector2(

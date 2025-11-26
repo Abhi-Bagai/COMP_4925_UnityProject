@@ -187,10 +187,10 @@ TextureImporter:
       name: Walker2_0
       rect:
         serializedVersion: 2
-        x: 0
+        x: 1
         y: 1800
-        width: 400
-        height: 600
+        width: 399
+        height: 599
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -211,8 +211,8 @@ TextureImporter:
         serializedVersion: 2
         x: 400
         y: 1800
-        width: 400
-        height: 600
+        width: 399
+        height: 599
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -231,10 +231,10 @@ TextureImporter:
       name: Walker2_2
       rect:
         serializedVersion: 2
-        x: 800
+        x: 799
         y: 1800
-        width: 400
-        height: 600
+        width: 399
+        height: 599
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -253,10 +253,10 @@ TextureImporter:
       name: Walker2_3
       rect:
         serializedVersion: 2
-        x: 1200
+        x: 1198
         y: 1800
-        width: 400
-        height: 600
+        width: 399
+        height: 599
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -275,10 +275,10 @@ TextureImporter:
       name: Walker2_4
       rect:
         serializedVersion: 2
-        x: 0
-        y: 1200
-        width: 400
-        height: 600
+        x: 1
+        y: 1201
+        width: 399
+        height: 599
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -298,9 +298,9 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 400
-        y: 1200
-        width: 400
-        height: 600
+        y: 1201
+        width: 399
+        height: 599
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -319,10 +319,10 @@ TextureImporter:
       name: Walker2_6
       rect:
         serializedVersion: 2
-        x: 800
-        y: 1200
-        width: 400
-        height: 600
+        x: 799
+        y: 1201
+        width: 399
+        height: 599
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -341,10 +341,10 @@ TextureImporter:
       name: Walker2_7
       rect:
         serializedVersion: 2
-        x: 1200
-        y: 1200
-        width: 400
-        height: 600
+        x: 1198
+        y: 1201
+        width: 399
+        height: 599
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -363,10 +363,10 @@ TextureImporter:
       name: Walker2_8
       rect:
         serializedVersion: 2
-        x: 0
-        y: 600
-        width: 400
-        height: 600
+        x: 1
+        y: 602
+        width: 399
+        height: 599
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -386,9 +386,9 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 400
-        y: 600
-        width: 400
-        height: 600
+        y: 602
+        width: 399
+        height: 599
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -407,10 +407,10 @@ TextureImporter:
       name: Walker2_10
       rect:
         serializedVersion: 2
-        x: 800
-        y: 600
-        width: 400
-        height: 600
+        x: 799
+        y: 602
+        width: 399
+        height: 599
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -429,10 +429,10 @@ TextureImporter:
       name: Walker2_11
       rect:
         serializedVersion: 2
-        x: 1200
-        y: 600
-        width: 400
-        height: 600
+        x: 1198
+        y: 602
+        width: 399
+        height: 599
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -451,10 +451,10 @@ TextureImporter:
       name: Walker2_12
       rect:
         serializedVersion: 2
-        x: 0
-        y: 0
-        width: 400
-        height: 600
+        x: 1
+        y: 3
+        width: 399
+        height: 599
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -474,9 +474,9 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 400
-        y: 0
-        width: 400
-        height: 600
+        y: 3
+        width: 399
+        height: 599
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -495,10 +495,10 @@ TextureImporter:
       name: Walker2_14
       rect:
         serializedVersion: 2
-        x: 800
-        y: 0
-        width: 400
-        height: 600
+        x: 799
+        y: 3
+        width: 399
+        height: 599
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -517,10 +517,10 @@ TextureImporter:
       name: Walker2_15
       rect:
         serializedVersion: 2
-        x: 1200
-        y: 0
-        width: 400
-        height: 600
+        x: 1198
+        y: 3
+        width: 399
+        height: 599
       alignment: 0
       pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -549,7 +549,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries:
       - key: SpriteEditor.SliceSettings
-        value: '{"sliceOnImport":false,"gridCellCount":{"x":4.0,"y":4.0},"gridSpriteSize":{"x":400.0,"y":600.0},"gridSpriteOffset":{"x":0.0,"y":0.0},"gridSpritePadding":{"x":0.0,"y":0.0},"pivot":{"x":0.5,"y":0.5},"pivotPixels":{"x":0.0,"y":0.0},"autoSlicingMethod":0,"spriteAlignment":0,"pivotUnitMode":0,"slicingType":2,"keepEmptyRects":false,"isAlternate":false}'
+        value: '{"sliceOnImport":false,"gridCellCount":{"x":4.0,"y":4.0},"gridSpriteSize":{"x":399.0,"y":599.0},"gridSpriteOffset":{"x":1.0,"y":1.0},"gridSpritePadding":{"x":0.0,"y":0.0},"pivot":{"x":0.5,"y":0.5},"pivotPixels":{"x":0.0,"y":0.0},"autoSlicingMethod":0,"spriteAlignment":0,"pivotUnitMode":0,"slicingType":2,"keepEmptyRects":false,"isAlternate":false}'
     nameFileIdTable:
       Walker2_0: -8150998142150495545
       Walker2_1: -6710963746927287979

@@ -4,6 +4,8 @@ using System.Collections;
 [RequireComponent(typeof(SpriteRenderer), typeof(Rigidbody2D), typeof(Collider2D))]
 public class DiceRoller2D : MonoBehaviour
 {
+    private AudioPlayer player;
+
     [Header("Dice Sprites (1–6)")]
     public Sprite[] diceFaces;
 
@@ -22,6 +24,7 @@ public class DiceRoller2D : MonoBehaviour
 
     void Awake()
     {
+        player = FindAnyObjectByType<AudioPlayer>();
         spriteRenderer = GetComponent<SpriteRenderer>();
         rb = GetComponent<Rigidbody2D>();
         RollOnce(); // initial random face
@@ -65,6 +68,7 @@ public class DiceRoller2D : MonoBehaviour
         if (collision.relativeVelocity.magnitude > collisionImpactThreshold && !isRolling)
         {
             StartCoroutine(RollAnimation());
+            player?.PlayDiceRollSoundOne();
         }
     }
 
@@ -73,6 +77,7 @@ public class DiceRoller2D : MonoBehaviour
     {
         currentValue = Random.Range(1, 7);
         spriteRenderer.sprite = diceFaces[currentValue - 1];
+        player?.PlayDiceRollSoundTwo();
     }
 
     // When dice settle, just lock the last visible face (no new random)
