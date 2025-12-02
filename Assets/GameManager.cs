@@ -2,12 +2,12 @@ using UnityEngine;
 
 public class GameManager : MonoBehaviour
 {
-    [SerializeField]  ParticleSystem particleSystem;
+    [SerializeField] new ParticleSystem particleSystem;
     private LevelManager levelManager;
+    
     private void Awake()
     {
-        LevelManager levelManager = FindAnyObjectByType<LevelManager>();
-        
+        levelManager = FindAnyObjectByType<LevelManager>();
     }
 
     private void PressedButton()

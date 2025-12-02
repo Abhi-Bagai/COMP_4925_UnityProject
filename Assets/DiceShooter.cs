@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.EventSystems;
 
 [RequireComponent(typeof(LineRenderer))]
 public class DiceShooter : MonoBehaviour
@@ -36,6 +37,12 @@ void Update()
     // Only allow starting a drag if we can roll
     if (Input.GetMouseButtonDown(0))
     {
+        // Don't start drag if clicking on UI elements
+        if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
+        {
+            return; // Ignore clicks on UI
+        }
+
         // Check if rolling is allowed before starting drag
         if (CrapsGameManager.Instance != null && !CrapsGameManager.Instance.CanRoll())
         {
@@ -55,6 +62,14 @@ void Update()
 
     if (Input.GetMouseButtonUp(0) && isDragging)
     {
+        // Don't shoot if releasing over UI elements
+        if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
+        {
+            ClearLine();
+            isDragging = false;
+            return; // Cancel drag if over UI
+        }
+
         // Double-check we can still roll (in case state changed during drag)
         if (CrapsGameManager.Instance != null && !CrapsGameManager.Instance.CanRoll())
         {

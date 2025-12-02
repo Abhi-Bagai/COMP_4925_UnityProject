@@ -65,10 +65,15 @@ public class DiceManager : MonoBehaviour
         if (allStopped)
         {
             int sum = 0;
+            List<int> diceValues = new List<int>();
             foreach (var d in activeDice)
-                sum += d.CurrentValue;
+            {
+                int value = d.CurrentValue;
+                diceValues.Add(value);
+                sum += value;
+            }
 
-            ShowResult(sum);
+            ShowResult(sum, diceValues);
             activeDice.Clear();
             isRegisteringNewRoll = false; // Reset flag after roll completes
             // Start cleanup coroutine to remove dice after display time
@@ -76,7 +81,7 @@ public class DiceManager : MonoBehaviour
         }
     }
 
-    private void ShowResult(int total)
+    private void ShowResult(int total, List<int> diceValues)
     {
         showingResult = true;
         Debug.Log($"Total Roll: {total}");
@@ -90,7 +95,7 @@ public class DiceManager : MonoBehaviour
         // Notify CrapsGameManager that the roll is complete
         if (CrapsGameManager.Instance != null)
         {
-            CrapsGameManager.Instance.OnRollCompleted(total);
+            CrapsGameManager.Instance.OnRollCompleted(total, diceValues);
         }
     }
 

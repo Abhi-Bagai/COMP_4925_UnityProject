@@ -2,6 +2,7 @@ using UnityEngine;
 
 public class AudioPlayer : MonoBehaviour
 {
+    public static AudioPlayer Instance { get; private set; }
 
     [Header("Dice Roll Clips")]
     [SerializeField] AudioClip diceRollSoundOne;
@@ -9,9 +10,11 @@ public class AudioPlayer : MonoBehaviour
     [SerializeField] AudioClip diceRollFallback;
     [SerializeField] AudioClip menuMusic;
 
-    [SerializeField] [Range(0f, 1f)] float volume = 1f;
+    [Header("Game Outcome Clips")]
+    [SerializeField] AudioClip winSound;
+    [SerializeField] AudioClip loseSound;
 
-    static AudioPlayer instance = null;
+    [SerializeField] [Range(0f, 1f)] float volume = 1f;
 
     AudioClip GetClip(AudioClip preferredClip)
     {
@@ -54,15 +57,25 @@ public class AudioPlayer : MonoBehaviour
         PlayClip(menuMusic);
     }
 
+    public void PlayWinSound()
+    {
+        PlayClip(winSound);
+    }
+
+    public void PlayLoseSound()
+    {
+        PlayClip(loseSound);
+    }
+
     void Awake()
     {
-        if (instance != null && instance != this)
-            {
+        if (Instance != null && Instance != this)
+        {
             Destroy(gameObject);
             return;
         }
 
-        instance = this;
+        Instance = this;
         DontDestroyOnLoad(gameObject);
     }
     void Start()

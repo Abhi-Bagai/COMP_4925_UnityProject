@@ -5,7 +5,7 @@ using System.Collections;
 public class LevelManager : MonoBehaviour
 {
     private AudioPlayer player;
-    [SerializeField]  ParticleSystem particleSystem;
+    [SerializeField] new ParticleSystem particleSystem;
 
     void Awake()
     {
@@ -17,6 +17,22 @@ public class LevelManager : MonoBehaviour
         player.PlayMenuMusic();
         particleSystem.Play();
         StartCoroutine(LoadAfterWait("TableGame", 0.5f));
+    }
+
+    /// <summary>
+    /// Loads the menu scene
+    /// </summary>
+    public void LoadMenu()
+    {
+        if (player != null)
+        {
+            player.PlayMenuMusic();
+        }
+        if (particleSystem != null)
+        {
+            particleSystem.Play();
+        }
+        StartCoroutine(LoadAfterWait("Menu", 0.5f));
     }
 
     IEnumerator LoadAfterWait(string scene, float delay)
