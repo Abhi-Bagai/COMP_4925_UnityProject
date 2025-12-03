@@ -113,6 +113,9 @@
         document.querySelector("#unity-container").style.left = "0";
         document.body.style.margin = "0";
         document.body.style.overflow = "hidden";
+        
+        // Force 1:1 pixel ratio to match Unity Editor rendering
+        config.devicePixelRatio = 1;
       }
 
       document.querySelector("#unity-loading-bar").style.display = "block";
