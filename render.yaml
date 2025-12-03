@@ -1,0 +1,31 @@
+services:
+  # Backend API
+  - type: web
+    name: craps-game-api
+    runtime: node
+    region: oregon
+    plan: free
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false  # Set this manually in dashboard
+    healthCheckPath: /api/health
+
+  # Frontend (Unity WebGL Build)
+  - type: web
+    name: craps-game-frontend
+    runtime: static
+    region: oregon
+    plan: free
+    rootDir: frontend/Build
+    buildCommand: echo "No build needed"
+    staticPublishPath: .
+    headers:
+      - path: /*
+        name: Cache-Control
+        value: no-cache
+
