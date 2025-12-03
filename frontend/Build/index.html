@@ -9,7 +9,7 @@
   </head>
   <body>
     <div id="unity-container" class="unity-desktop">
-      <canvas id="unity-canvas" width=1920 height=1080 tabindex="-1" style="width: 100%; height: 100%;"></canvas>
+      <canvas id="unity-canvas" width=960 height=600 tabindex="-1"></canvas>
       <div id="unity-loading-bar">
         <div id="unity-logo"></div>
         <div id="unity-progress-bar-empty">
@@ -103,19 +103,9 @@
 
 
       } else {
-        // Desktop style: Fill the browser window
-        canvas.style.width = "100%";
-        canvas.style.height = "100%";
-        document.querySelector("#unity-container").style.width = "100vw";
-        document.querySelector("#unity-container").style.height = "100vh";
-        document.querySelector("#unity-container").style.position = "absolute";
-        document.querySelector("#unity-container").style.top = "0";
-        document.querySelector("#unity-container").style.left = "0";
-        document.body.style.margin = "0";
-        document.body.style.overflow = "hidden";
-        
-        // Force 1:1 pixel ratio to match Unity Editor rendering
-        config.devicePixelRatio = 1;
+        // Desktop style: Render the game canvas in a window that can be maximized to fullscreen:
+        canvas.style.width = "960px";
+        canvas.style.height = "600px";
       }
 
       document.querySelector("#unity-loading-bar").style.display = "block";
