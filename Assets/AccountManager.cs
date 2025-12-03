@@ -11,8 +11,11 @@ public class AccountManager : MonoBehaviour
 
     [Header("Starting Values")]
     [SerializeField] private int startingMoney = 1000;
-    [SerializeField] private int loanAmount = 500; // Amount given when player runs out of money
-    [SerializeField] private int loanThreshold = 50; // Minimum money to request loan manually
+    
+    [Header("Loan Settings")]
+    [SerializeField] private int loanAmount = 500; // Amount given to player when requesting loan
+    [SerializeField] private int loanDebt = 525; // Amount added to debt (includes 5% interest)
+    [SerializeField] private int loanThreshold = 100; // Must be below this to request loan
 
     // Account data
     private int currentMoney;
@@ -29,6 +32,7 @@ public class AccountManager : MonoBehaviour
     public event Action<int> OnMoneyChanged;
     public event Action<int, int> OnStatsChanged; // wins, losses
     public event Action<int> OnWinStreakChanged;
+    public event Action<int> OnLoanChanged; // Fired when loan amount changes
     public event Action OnOutOfMoney; // Fired when money reaches 0
 
     // PlayerPrefs keys
@@ -85,6 +89,62 @@ public class AccountManager : MonoBehaviour
         PlayerPrefs.SetInt(MONEY_LOST_KEY, totalMoneyLost);
         PlayerPrefs.SetInt(TOTAL_LOANED_KEY, totalLoaned);
         PlayerPrefs.Save();
+
+        // Sync to cloud if AccountService is available
+        SyncToCloud();
+    }
+
+    /// <summary>
+    /// Loads account data from AccountData (cloud account)
+    /// </summary>
+    public void LoadAccountData(AccountData accountData)
+    {
+        if (accountData == null) return;
+
+        currentMoney = accountData.currentMoney;
+        totalWins = accountData.totalWins;
+        totalLosses = accountData.totalLosses;
+        currentWinStreak = accountData.currentWinStreak;
+        bestWinStreak = accountData.bestWinStreak;
+        totalGamesPlayed = accountData.totalGamesPlayed;
+        totalMoneyWon = accountData.totalMoneyWon;
+        totalMoneyLost = accountData.totalMoneyLost;
+        totalLoaned = accountData.totalLoaned;
+
+        // Also save to PlayerPrefs as backup
+        SaveAccountData();
+
+        // Notify UI
+        OnMoneyChanged?.Invoke(currentMoney);
+        OnStatsChanged?.Invoke(totalWins, totalLosses);
+        OnWinStreakChanged?.Invoke(currentWinStreak);
+    }
+
+    /// <summary>
+    /// Syncs current account data to cloud via AccountService
+    /// </summary>
+    private void SyncToCloud()
+    {
+        if (AccountService.Instance != null && AccountService.Instance.IsAuthenticated())
+        {
+            AccountData account = AccountService.Instance.GetCurrentAccount();
+            if (account != null)
+            {
+                // Update account data with current values
+                account.currentMoney = currentMoney;
+                account.totalWins = totalWins;
+                account.totalLosses = totalLosses;
+                account.currentWinStreak = currentWinStreak;
+                account.bestWinStreak = bestWinStreak;
+                account.totalGamesPlayed = totalGamesPlayed;
+                account.totalMoneyWon = totalMoneyWon;
+                account.totalMoneyLost = totalMoneyLost;
+                account.totalLoaned = totalLoaned;
+
+                // Sync to cloud (async, don't wait)
+                AccountService.Instance.SyncAccount(account);
+            }
+        }
     }
 
     #region Money Management
@@ -231,19 +291,21 @@ public class AccountManager : MonoBehaviour
     #region Loan Management
 
     /// <summary>
-    /// Gives the player a loan when they run out of money
+    /// Gives the player a loan when they run out of money (auto-loan during game)
     /// </summary>
     public void GiveLoan()
     {
         currentMoney += loanAmount;
-        totalLoaned += loanAmount;
+        totalLoaned += loanDebt; // Add debt with interest
         SaveAccountData();
         OnMoneyChanged?.Invoke(currentMoney);
-        Debug.Log($"Casino loaned ${loanAmount}. Total loaned: ${totalLoaned}");
+        OnLoanChanged?.Invoke(totalLoaned);
+        Debug.Log($"Casino loaned ${loanAmount}. Debt added: ${loanDebt}. Total debt: ${totalLoaned}");
     }
 
     /// <summary>
     /// Requests a loan manually (only works if money is below threshold)
+    /// Player receives $500, but $525 is added to their debt (5% interest)
     /// </summary>
     public bool RequestLoan()
     {
@@ -253,7 +315,50 @@ public class AccountManager : MonoBehaviour
             return false;
         }
 
-        GiveLoan();
+        currentMoney += loanAmount; // Give player $500
+        totalLoaned += loanDebt; // Add $525 to debt (5% interest)
+        SaveAccountData();
+        OnMoneyChanged?.Invoke(currentMoney);
+        OnLoanChanged?.Invoke(totalLoaned);
+        Debug.Log($"Loan requested. Received: ${loanAmount}. Debt added: ${loanDebt}. Total debt: ${totalLoaned}");
+        return true;
+    }
+
+    /// <summary>
+    /// Repays a portion of the loan
+    /// </summary>
+    /// <param name="amount">Amount to repay</param>
+    /// <returns>True if repayment was successful</returns>
+    public bool RepayLoan(int amount)
+    {
+        if (amount <= 0)
+        {
+            Debug.LogWarning("Repayment amount must be positive.");
+            return false;
+        }
+
+        if (totalLoaned <= 0)
+        {
+            Debug.LogWarning("No loan to repay.");
+            return false;
+        }
+
+        if (currentMoney < amount)
+        {
+            Debug.LogWarning($"Insufficient funds. Have: ${currentMoney}, trying to repay: ${amount}");
+            return false;
+        }
+
+        // Cap repayment at total loan amount
+        int actualRepayment = Mathf.Min(amount, totalLoaned);
+        
+        currentMoney -= actualRepayment;
+        totalLoaned -= actualRepayment;
+        
+        SaveAccountData();
+        OnMoneyChanged?.Invoke(currentMoney);
+        OnLoanChanged?.Invoke(totalLoaned);
+        Debug.Log($"Loan repaid: ${actualRepayment}. Remaining debt: ${totalLoaned}");
         return true;
     }
 
@@ -266,11 +371,27 @@ public class AccountManager : MonoBehaviour
     }
 
     /// <summary>
+    /// Checks if player has any outstanding loan
+    /// </summary>
+    public bool HasLoan()
+    {
+        return totalLoaned > 0;
+    }
+
+    /// <summary>
     /// Checks if player is out of money
     /// </summary>
     public bool IsOutOfMoney()
     {
         return currentMoney <= 0;
+    }
+
+    /// <summary>
+    /// Gets the loan threshold (minimum money to request loan)
+    /// </summary>
+    public int GetLoanThreshold()
+    {
+        return loanThreshold;
     }
 
     #endregion
