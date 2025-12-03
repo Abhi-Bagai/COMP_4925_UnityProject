@@ -36,8 +36,14 @@ public class HomeScreen : MonoBehaviour
     public string gameSceneName = "TableGame";
     public string loginSceneName = "Login";
 
+    [Header("Transition")]
+    private LevelManager levelManager;
+
     private void Start()
     {
+        // Find LevelManager for scene transitions with particle effects
+        levelManager = FindAnyObjectByType<LevelManager>();
+        
         // Setup button listeners
         if (playGameButton != null)
         {
@@ -402,8 +408,22 @@ public class HomeScreen : MonoBehaviour
         // Sync account before leaving
         SyncAccount();
         
-        // Load game scene
-        SceneManager.LoadScene(gameSceneName);
+        // Disable button to prevent double-clicks during transition
+        if (playGameButton != null)
+        {
+            playGameButton.interactable = false;
+        }
+        
+        // Use LevelManager for particle effect transition (2 second delay)
+        if (levelManager != null)
+        {
+            levelManager.LoadNewRun();
+        }
+        else
+        {
+            // Fallback if LevelManager not found
+            SceneManager.LoadScene(gameSceneName);
+        }
     }
 
     /// <summary>

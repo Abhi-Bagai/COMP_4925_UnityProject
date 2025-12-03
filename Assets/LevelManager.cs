@@ -14,9 +14,15 @@ public class LevelManager : MonoBehaviour
 
     public void LoadNewRun()
     {   
-        player.PlayMenuMusic();
-        particleSystem.Play();
-        StartCoroutine(LoadAfterWait("TableGame", 0.5f));
+        if (player != null)
+        {
+            player.PlayMenuMusic();
+        }
+        if (particleSystem != null)
+        {
+            particleSystem.Play();
+        }
+        StartCoroutine(LoadAfterWait("TableGame", 2f));
     }
 
     /// <summary>
@@ -32,7 +38,7 @@ public class LevelManager : MonoBehaviour
         {
             particleSystem.Play();
         }
-        StartCoroutine(LoadAfterWait("Menu", 0.5f));
+        StartCoroutine(LoadAfterWait("Menu", 2f));
     }
 
     IEnumerator LoadAfterWait(string scene, float delay)
