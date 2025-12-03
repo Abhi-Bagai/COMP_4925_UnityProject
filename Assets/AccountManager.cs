@@ -55,13 +55,45 @@ public class AccountManager : MonoBehaviour
         }
         Instance = this;
         DontDestroyOnLoad(gameObject);
-        LoadAccountData();
+        
+        // Try to load from signed-in account first, otherwise use PlayerPrefs
+        LoadFromSignedInAccountOrPlayerPrefs();
+    }
+
+    /// <summary>
+    /// Loads from signed-in account if available, otherwise from PlayerPrefs
+    /// </summary>
+    private void LoadFromSignedInAccountOrPlayerPrefs()
+    {
+        // Check if there's a signed-in account via AccountService
+        if (AccountService.Instance != null && AccountService.Instance.IsAuthenticated())
+        {
+            AccountData account = AccountService.Instance.GetCurrentAccount();
+            if (account != null)
+            {
+                // Load from signed-in account
+                currentMoney = account.currentMoney;
+                totalWins = account.totalWins;
+                totalLosses = account.totalLosses;
+                currentWinStreak = account.currentWinStreak;
+                bestWinStreak = account.bestWinStreak;
+                totalGamesPlayed = account.totalGamesPlayed;
+                totalMoneyWon = account.totalMoneyWon;
+                totalMoneyLost = account.totalMoneyLost;
+                totalLoaned = account.totalLoaned;
+                Debug.Log($"AccountManager: Loaded from signed-in account '{account.username}' - Money: ${currentMoney}");
+                return;
+            }
+        }
+        
+        // Fallback to PlayerPrefs
+        LoadAccountDataFromPlayerPrefs();
     }
 
     /// <summary>
     /// Loads account data from PlayerPrefs or initializes with default values
     /// </summary>
-    private void LoadAccountData()
+    private void LoadAccountDataFromPlayerPrefs()
     {
         currentMoney = PlayerPrefs.GetInt(MONEY_KEY, startingMoney);
         totalWins = PlayerPrefs.GetInt(WINS_KEY, 0);
@@ -72,6 +104,23 @@ public class AccountManager : MonoBehaviour
         totalMoneyWon = PlayerPrefs.GetInt(MONEY_WON_KEY, 0);
         totalMoneyLost = PlayerPrefs.GetInt(MONEY_LOST_KEY, 0);
         totalLoaned = PlayerPrefs.GetInt(TOTAL_LOANED_KEY, 0);
+        Debug.Log($"AccountManager: Loaded from PlayerPrefs - Money: ${currentMoney}");
+    }
+
+    void Start()
+    {
+        // Re-check for signed-in account after all Awake() methods have run
+        // This handles the case where AccountService.Awake() runs after AccountManager.Awake()
+        if (AccountService.Instance != null && AccountService.Instance.IsAuthenticated())
+        {
+            AccountData account = AccountService.Instance.GetCurrentAccount();
+            if (account != null && account.currentMoney != currentMoney)
+            {
+                // Account data differs, reload from signed-in account
+                LoadAccountData(account);
+                Debug.Log($"AccountManager: Re-synced from signed-in account '{account.username}' in Start()");
+            }
+        }
     }
 
     /// <summary>
@@ -404,7 +453,7 @@ public class AccountManager : MonoBehaviour
     public void ResetAllData()
     {
         PlayerPrefs.DeleteAll();
-        LoadAccountData();
+        LoadAccountDataFromPlayerPrefs();
         OnMoneyChanged?.Invoke(currentMoney);
         OnStatsChanged?.Invoke(totalWins, totalLosses);
         OnWinStreakChanged?.Invoke(currentWinStreak);

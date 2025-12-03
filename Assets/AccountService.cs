@@ -116,9 +116,10 @@ public class AccountService : MonoBehaviour
             OnAccountLoaded?.Invoke(newAccount);
             OnSignUpSuccess?.Invoke("Account created successfully!");
             callback?.Invoke(true, newAccount);
+            yield break; // Done - local storage succeeded
         }
 
-        // Try to save to cloud
+        // Try to save to cloud (only if not using local storage)
         string url = $"{apiBaseUrl}/accounts";
         string json = newAccount.ToJson();
         
@@ -129,15 +130,19 @@ public class AccountService : MonoBehaviour
             if (request.result == UnityWebRequest.Result.Success)
             {
                 // Account created in cloud
+                currentAccount = newAccount;
+                isAuthenticated = true;
+                OnAccountLoaded?.Invoke(newAccount);
                 OnSignUpSuccess?.Invoke("Account created successfully!");
                 callback?.Invoke(true, newAccount);
             }
             else
             {
-                // Cloud save failed, but local save succeeded
-                Debug.LogWarning($"Cloud save failed, but account saved locally: {request.error}");
-                OnSignUpSuccess?.Invoke("Account created (local storage only)");
-                callback?.Invoke(true, newAccount);
+                // Cloud save failed and local storage is disabled
+                string error = $"Failed to create account: {request.error}";
+                Debug.LogError(error);
+                OnSignUpFailed?.Invoke(error);
+                callback?.Invoke(false, null);
             }
         }
     }

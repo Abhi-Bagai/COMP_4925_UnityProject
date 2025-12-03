@@ -34,6 +34,7 @@ public class HomeScreen : MonoBehaviour
 
     [Header("Scenes")]
     public string gameSceneName = "TableGame";
+    public string loginSceneName = "Login";
 
     private void Start()
     {
@@ -266,19 +267,32 @@ public class HomeScreen : MonoBehaviour
     /// </summary>
     private void OnRequestLoanClicked()
     {
-        if (AccountManager.Instance == null) return;
+        Debug.Log("Request Loan button clicked!");
+        
+        if (AccountManager.Instance == null)
+        {
+            Debug.LogError("AccountManager.Instance is null!");
+            UpdateLoanStatusMessage("Error: Account system not available.", Color.red);
+            return;
+        }
+
+        int currentMoney = AccountManager.Instance.GetMoney();
+        int threshold = AccountManager.Instance.GetLoanThreshold();
+        Debug.Log($"Current money: ${currentMoney}, Threshold: ${threshold}, Can request: {currentMoney < threshold}");
 
         if (AccountManager.Instance.RequestLoan())
         {
             // Loan granted
+            Debug.Log("Loan granted!");
             UpdateLoanStatusMessage("Loan granted! You received $500. $525 added to your debt (5% interest).", Color.green);
             LoadAccountData();
+            UpdateLoanButtonStates();
         }
         else
         {
             // Loan denied
-            int threshold = AccountManager.Instance.GetLoanThreshold();
-            UpdateLoanStatusMessage($"Loan denied. You must have less than ${threshold} to request a loan.", Color.red);
+            Debug.Log($"Loan denied - you have ${currentMoney}, need less than ${threshold}");
+            UpdateLoanStatusMessage($"Loan denied. You have ${currentMoney}. Must have less than ${threshold} to request a loan.", Color.red);
         }
     }
 
@@ -406,9 +420,8 @@ public class HomeScreen : MonoBehaviour
             AccountService.Instance.SignOut();
         }
 
-        // Navigate to login screen (or reload menu)
-        // You might want to create a Login scene for this
-        SceneManager.LoadScene("Menu");
+        // Navigate to login screen
+        SceneManager.LoadScene(loginSceneName);
     }
 
     /// <summary>

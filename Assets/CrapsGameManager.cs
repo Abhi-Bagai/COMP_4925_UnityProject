@@ -14,6 +14,10 @@ public class CrapsGameManager : MonoBehaviour
     public TMP_Text pointText;     // Optional: display point value
     public TMP_Text resultText;    // Win/lose message
     public GameObject resultPanel; // Panel to show win/lose result
+    
+    [Header("Navigation")]
+    public UnityEngine.UI.Button backToMenuButton; // Button to return to menu
+    public string menuSceneName = "Menu"; // Name of the menu scene
 
     [Header("Betting")]
     [SerializeField] private int defaultBetAmount = 10;
@@ -74,6 +78,40 @@ public class CrapsGameManager : MonoBehaviour
         {
             AccountManager.Instance.OnOutOfMoney += HandleOutOfMoney;
         }
+
+        // Setup back to menu button
+        if (backToMenuButton != null)
+        {
+            backToMenuButton.onClick.AddListener(OnBackToMenuClicked);
+        }
+    }
+
+    /// <summary>
+    /// Called when Back to Menu button is clicked
+    /// </summary>
+    public void OnBackToMenuClicked()
+    {
+        // Sync account data before leaving
+        if (AccountManager.Instance != null && AccountService.Instance != null)
+        {
+            AccountData account = AccountService.Instance.GetCurrentAccount();
+            if (account != null)
+            {
+                account.currentMoney = AccountManager.Instance.GetMoney();
+                account.totalWins = AccountManager.Instance.GetTotalWins();
+                account.totalLosses = AccountManager.Instance.GetTotalLosses();
+                account.currentWinStreak = AccountManager.Instance.GetCurrentWinStreak();
+                account.bestWinStreak = AccountManager.Instance.GetBestWinStreak();
+                account.totalGamesPlayed = AccountManager.Instance.GetTotalGamesPlayed();
+                account.totalMoneyWon = AccountManager.Instance.GetTotalMoneyWon();
+                account.totalMoneyLost = AccountManager.Instance.GetTotalMoneyLost();
+                account.totalLoaned = AccountManager.Instance.GetTotalLoaned();
+                AccountService.Instance.SyncAccount(account);
+            }
+        }
+
+        // Load menu scene
+        SceneManager.LoadScene(menuSceneName);
     }
 
     void OnDestroy()
