@@ -1,6 +1,6 @@
 const express = require('express');
 const cors = require('cors');
-const Database = require('better-sqlite3');
+const fs = require('fs');
 const path = require('path');
 
 const app = express();
@@ -10,33 +10,37 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
-// Initialize SQLite database
-// Use /data directory on Render (persistent disk) or local directory
-const dbPath = process.env.NODE_ENV === 'production' 
-  ? '/data/accounts.db' 
-  : path.join(__dirname, 'accounts.db');
-const db = new Database(dbPath);
-console.log(`Database path: ${dbPath}`);
+// Simple JSON file database (works on free tier without persistent disk)
+// Note: Data persists in memory during runtime, saved to file for local dev
+const DATA_FILE = path.join(__dirname, 'accounts.json');
+let accounts = {};
 
-// Create accounts table if it doesn't exist
-db.exec(`
-  CREATE TABLE IF NOT EXISTS accounts (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    account_id TEXT UNIQUE NOT NULL,
-    username TEXT UNIQUE NOT NULL,
-    current_money INTEGER DEFAULT 1000,
-    total_wins INTEGER DEFAULT 0,
-    total_losses INTEGER DEFAULT 0,
-    current_win_streak INTEGER DEFAULT 0,
-    best_win_streak INTEGER DEFAULT 0,
-    total_games_played INTEGER DEFAULT 0,
-    total_money_won INTEGER DEFAULT 0,
-    total_money_lost INTEGER DEFAULT 0,
-    total_loaned INTEGER DEFAULT 0,
-    last_updated TEXT DEFAULT CURRENT_TIMESTAMP,
-    created_at TEXT DEFAULT CURRENT_TIMESTAMP
-  )
-`);
+// Load existing data (for local development)
+function loadData() {
+  try {
+    if (fs.existsSync(DATA_FILE)) {
+      const data = fs.readFileSync(DATA_FILE, 'utf8');
+      accounts = JSON.parse(data);
+      console.log(`Loaded ${Object.keys(accounts).length} accounts from file`);
+    }
+  } catch (error) {
+    console.log('No existing data file, starting fresh');
+    accounts = {};
+  }
+}
+
+// Save data to file (for local development)
+function saveData() {
+  try {
+    fs.writeFileSync(DATA_FILE, JSON.stringify(accounts, null, 2));
+  } catch (error) {
+    console.log('Could not save to file (normal on Render free tier)');
+  }
+}
+
+// Load data on startup
+loadData();
+
 
 // Health check endpoint
 app.get('/', (req, res) => {
@@ -51,27 +55,13 @@ app.get('/api/health', (req, res) => {
 app.get('/api/accounts/:username', (req, res) => {
   try {
     const { username } = req.params;
-    const account = db.prepare('SELECT * FROM accounts WHERE username = ?').get(username);
+    const account = accounts[username.toLowerCase()];
     
     if (!account) {
       return res.status(404).json({ error: 'Account not found' });
     }
 
-    // Convert to camelCase for Unity
-    res.json({
-      accountId: account.account_id,
-      username: account.username,
-      currentMoney: account.current_money,
-      totalWins: account.total_wins,
-      totalLosses: account.total_losses,
-      currentWinStreak: account.current_win_streak,
-      bestWinStreak: account.best_win_streak,
-      totalGamesPlayed: account.total_games_played,
-      totalMoneyWon: account.total_money_won,
-      totalMoneyLost: account.total_money_lost,
-      totalLoaned: account.total_loaned,
-      lastUpdated: account.last_updated
-    });
+    res.json(account);
   } catch (error) {
     console.error('Error getting account:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -87,35 +77,33 @@ app.post('/api/accounts', (req, res) => {
       return res.status(400).json({ error: 'Username is required' });
     }
 
+    const usernameKey = username.toLowerCase();
+
     // Check if username already exists
-    const existing = db.prepare('SELECT * FROM accounts WHERE username = ?').get(username);
-    if (existing) {
+    if (accounts[usernameKey]) {
       return res.status(409).json({ error: 'Username already exists' });
     }
 
-    const stmt = db.prepare(`
-      INSERT INTO accounts (account_id, username, current_money)
-      VALUES (?, ?, ?)
-    `);
+    const newAccount = {
+      accountId: accountId || generateId(),
+      username: username,
+      currentMoney: currentMoney,
+      totalWins: 0,
+      totalLosses: 0,
+      currentWinStreak: 0,
+      bestWinStreak: 0,
+      totalGamesPlayed: 0,
+      totalMoneyWon: 0,
+      totalMoneyLost: 0,
+      totalLoaned: 0,
+      lastUpdated: new Date().toISOString()
+    };
 
-    const result = stmt.run(accountId || generateId(), username, currentMoney);
+    accounts[usernameKey] = newAccount;
+    saveData();
 
-    const newAccount = db.prepare('SELECT * FROM accounts WHERE id = ?').get(result.lastInsertRowid);
-
-    res.status(201).json({
-      accountId: newAccount.account_id,
-      username: newAccount.username,
-      currentMoney: newAccount.current_money,
-      totalWins: newAccount.total_wins,
-      totalLosses: newAccount.total_losses,
-      currentWinStreak: newAccount.current_win_streak,
-      bestWinStreak: newAccount.best_win_streak,
-      totalGamesPlayed: newAccount.total_games_played,
-      totalMoneyWon: newAccount.total_money_won,
-      totalMoneyLost: newAccount.total_money_lost,
-      totalLoaned: newAccount.total_loaned,
-      lastUpdated: newAccount.last_updated
-    });
+    console.log(`Created account: ${username}`);
+    res.status(201).json(newAccount);
   } catch (error) {
     console.error('Error creating account:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -126,67 +114,38 @@ app.post('/api/accounts', (req, res) => {
 app.put('/api/accounts/:accountId', (req, res) => {
   try {
     const { accountId } = req.params;
-    const {
-      currentMoney,
-      totalWins,
-      totalLosses,
-      currentWinStreak,
-      bestWinStreak,
-      totalGamesPlayed,
-      totalMoneyWon,
-      totalMoneyLost,
-      totalLoaned
-    } = req.body;
+    const updates = req.body;
 
-    const existing = db.prepare('SELECT * FROM accounts WHERE account_id = ?').get(accountId);
-    if (!existing) {
+    // Find account by accountId
+    let foundKey = null;
+    for (const [key, account] of Object.entries(accounts)) {
+      if (account.accountId === accountId) {
+        foundKey = key;
+        break;
+      }
+    }
+
+    if (!foundKey) {
       return res.status(404).json({ error: 'Account not found' });
     }
 
-    const stmt = db.prepare(`
-      UPDATE accounts SET
-        current_money = COALESCE(?, current_money),
-        total_wins = COALESCE(?, total_wins),
-        total_losses = COALESCE(?, total_losses),
-        current_win_streak = COALESCE(?, current_win_streak),
-        best_win_streak = COALESCE(?, best_win_streak),
-        total_games_played = COALESCE(?, total_games_played),
-        total_money_won = COALESCE(?, total_money_won),
-        total_money_lost = COALESCE(?, total_money_lost),
-        total_loaned = COALESCE(?, total_loaned),
-        last_updated = CURRENT_TIMESTAMP
-      WHERE account_id = ?
-    `);
+    // Update fields
+    const account = accounts[foundKey];
+    if (updates.currentMoney !== undefined) account.currentMoney = updates.currentMoney;
+    if (updates.totalWins !== undefined) account.totalWins = updates.totalWins;
+    if (updates.totalLosses !== undefined) account.totalLosses = updates.totalLosses;
+    if (updates.currentWinStreak !== undefined) account.currentWinStreak = updates.currentWinStreak;
+    if (updates.bestWinStreak !== undefined) account.bestWinStreak = updates.bestWinStreak;
+    if (updates.totalGamesPlayed !== undefined) account.totalGamesPlayed = updates.totalGamesPlayed;
+    if (updates.totalMoneyWon !== undefined) account.totalMoneyWon = updates.totalMoneyWon;
+    if (updates.totalMoneyLost !== undefined) account.totalMoneyLost = updates.totalMoneyLost;
+    if (updates.totalLoaned !== undefined) account.totalLoaned = updates.totalLoaned;
+    account.lastUpdated = new Date().toISOString();
 
-    stmt.run(
-      currentMoney,
-      totalWins,
-      totalLosses,
-      currentWinStreak,
-      bestWinStreak,
-      totalGamesPlayed,
-      totalMoneyWon,
-      totalMoneyLost,
-      totalLoaned,
-      accountId
-    );
+    saveData();
 
-    const updated = db.prepare('SELECT * FROM accounts WHERE account_id = ?').get(accountId);
-
-    res.json({
-      accountId: updated.account_id,
-      username: updated.username,
-      currentMoney: updated.current_money,
-      totalWins: updated.total_wins,
-      totalLosses: updated.total_losses,
-      currentWinStreak: updated.current_win_streak,
-      bestWinStreak: updated.best_win_streak,
-      totalGamesPlayed: updated.total_games_played,
-      totalMoneyWon: updated.total_money_won,
-      totalMoneyLost: updated.total_money_lost,
-      totalLoaned: updated.total_loaned,
-      lastUpdated: updated.last_updated
-    });
+    console.log(`Updated account: ${account.username}`);
+    res.json(account);
   } catch (error) {
     console.error('Error updating account:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -197,11 +156,22 @@ app.put('/api/accounts/:accountId', (req, res) => {
 app.delete('/api/accounts/:accountId', (req, res) => {
   try {
     const { accountId } = req.params;
-    const result = db.prepare('DELETE FROM accounts WHERE account_id = ?').run(accountId);
     
-    if (result.changes === 0) {
+    // Find and delete account by accountId
+    let foundKey = null;
+    for (const [key, account] of Object.entries(accounts)) {
+      if (account.accountId === accountId) {
+        foundKey = key;
+        break;
+      }
+    }
+
+    if (!foundKey) {
       return res.status(404).json({ error: 'Account not found' });
     }
+
+    delete accounts[foundKey];
+    saveData();
 
     res.json({ message: 'Account deleted successfully' });
   } catch (error) {
