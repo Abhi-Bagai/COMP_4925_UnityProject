@@ -1,7 +1,6 @@
 const express = require('express');
 const cors = require('cors');
-const fs = require('fs');
-const path = require('path');
+const { Pool } = require('pg');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -10,37 +9,41 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
-// Simple JSON file database (works on free tier without persistent disk)
-// Note: Data persists in memory during runtime, saved to file for local dev
-const DATA_FILE = path.join(__dirname, 'accounts.json');
-let accounts = {};
+// PostgreSQL connection
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+});
 
-// Load existing data (for local development)
-function loadData() {
+// Initialize database table
+async function initDatabase() {
   try {
-    if (fs.existsSync(DATA_FILE)) {
-      const data = fs.readFileSync(DATA_FILE, 'utf8');
-      accounts = JSON.parse(data);
-      console.log(`Loaded ${Object.keys(accounts).length} accounts from file`);
-    }
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS accounts (
+        id SERIAL PRIMARY KEY,
+        account_id VARCHAR(255) UNIQUE NOT NULL,
+        username VARCHAR(255) UNIQUE NOT NULL,
+        current_money INTEGER DEFAULT 1000,
+        total_wins INTEGER DEFAULT 0,
+        total_losses INTEGER DEFAULT 0,
+        current_win_streak INTEGER DEFAULT 0,
+        best_win_streak INTEGER DEFAULT 0,
+        total_games_played INTEGER DEFAULT 0,
+        total_money_won INTEGER DEFAULT 0,
+        total_money_lost INTEGER DEFAULT 0,
+        total_loaned INTEGER DEFAULT 0,
+        last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    console.log('Database initialized successfully');
   } catch (error) {
-    console.log('No existing data file, starting fresh');
-    accounts = {};
+    console.error('Error initializing database:', error);
   }
 }
 
-// Save data to file (for local development)
-function saveData() {
-  try {
-    fs.writeFileSync(DATA_FILE, JSON.stringify(accounts, null, 2));
-  } catch (error) {
-    console.log('Could not save to file (normal on Render free tier)');
-  }
-}
-
-// Load data on startup
-loadData();
-
+// Initialize on startup
+initDatabase();
 
 // Health check endpoint
 app.get('/', (req, res) => {
@@ -52,16 +55,33 @@ app.get('/api/health', (req, res) => {
 });
 
 // Get account by username
-app.get('/api/accounts/:username', (req, res) => {
+app.get('/api/accounts/:username', async (req, res) => {
   try {
     const { username } = req.params;
-    const account = accounts[username.toLowerCase()];
+    const result = await pool.query(
+      'SELECT * FROM accounts WHERE LOWER(username) = LOWER($1)',
+      [username]
+    );
     
-    if (!account) {
+    if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Account not found' });
     }
 
-    res.json(account);
+    const account = result.rows[0];
+    res.json({
+      accountId: account.account_id,
+      username: account.username,
+      currentMoney: account.current_money,
+      totalWins: account.total_wins,
+      totalLosses: account.total_losses,
+      currentWinStreak: account.current_win_streak,
+      bestWinStreak: account.best_win_streak,
+      totalGamesPlayed: account.total_games_played,
+      totalMoneyWon: account.total_money_won,
+      totalMoneyLost: account.total_money_lost,
+      totalLoaned: account.total_loaned,
+      lastUpdated: account.last_updated
+    });
   } catch (error) {
     console.error('Error getting account:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -69,7 +89,7 @@ app.get('/api/accounts/:username', (req, res) => {
 });
 
 // Create new account
-app.post('/api/accounts', (req, res) => {
+app.post('/api/accounts', async (req, res) => {
   try {
     const { accountId, username, currentMoney = 1000 } = req.body;
 
@@ -77,33 +97,41 @@ app.post('/api/accounts', (req, res) => {
       return res.status(400).json({ error: 'Username is required' });
     }
 
-    const usernameKey = username.toLowerCase();
-
     // Check if username already exists
-    if (accounts[usernameKey]) {
+    const existing = await pool.query(
+      'SELECT * FROM accounts WHERE LOWER(username) = LOWER($1)',
+      [username]
+    );
+    
+    if (existing.rows.length > 0) {
       return res.status(409).json({ error: 'Username already exists' });
     }
 
-    const newAccount = {
-      accountId: accountId || generateId(),
-      username: username,
-      currentMoney: currentMoney,
-      totalWins: 0,
-      totalLosses: 0,
-      currentWinStreak: 0,
-      bestWinStreak: 0,
-      totalGamesPlayed: 0,
-      totalMoneyWon: 0,
-      totalMoneyLost: 0,
-      totalLoaned: 0,
-      lastUpdated: new Date().toISOString()
-    };
+    const newAccountId = accountId || generateId();
+    const result = await pool.query(
+      `INSERT INTO accounts (account_id, username, current_money)
+       VALUES ($1, $2, $3)
+       RETURNING *`,
+      [newAccountId, username, currentMoney]
+    );
 
-    accounts[usernameKey] = newAccount;
-    saveData();
-
+    const account = result.rows[0];
     console.log(`Created account: ${username}`);
-    res.status(201).json(newAccount);
+    
+    res.status(201).json({
+      accountId: account.account_id,
+      username: account.username,
+      currentMoney: account.current_money,
+      totalWins: account.total_wins,
+      totalLosses: account.total_losses,
+      currentWinStreak: account.current_win_streak,
+      bestWinStreak: account.best_win_streak,
+      totalGamesPlayed: account.total_games_played,
+      totalMoneyWon: account.total_money_won,
+      totalMoneyLost: account.total_money_lost,
+      totalLoaned: account.total_loaned,
+      lastUpdated: account.last_updated
+    });
   } catch (error) {
     console.error('Error creating account:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -111,41 +139,76 @@ app.post('/api/accounts', (req, res) => {
 });
 
 // Update account by accountId
-app.put('/api/accounts/:accountId', (req, res) => {
+app.put('/api/accounts/:accountId', async (req, res) => {
   try {
     const { accountId } = req.params;
-    const updates = req.body;
+    const {
+      currentMoney,
+      totalWins,
+      totalLosses,
+      currentWinStreak,
+      bestWinStreak,
+      totalGamesPlayed,
+      totalMoneyWon,
+      totalMoneyLost,
+      totalLoaned
+    } = req.body;
 
-    // Find account by accountId
-    let foundKey = null;
-    for (const [key, account] of Object.entries(accounts)) {
-      if (account.accountId === accountId) {
-        foundKey = key;
-        break;
-      }
-    }
-
-    if (!foundKey) {
+    // Check if account exists
+    const existing = await pool.query(
+      'SELECT * FROM accounts WHERE account_id = $1',
+      [accountId]
+    );
+    
+    if (existing.rows.length === 0) {
       return res.status(404).json({ error: 'Account not found' });
     }
 
-    // Update fields
-    const account = accounts[foundKey];
-    if (updates.currentMoney !== undefined) account.currentMoney = updates.currentMoney;
-    if (updates.totalWins !== undefined) account.totalWins = updates.totalWins;
-    if (updates.totalLosses !== undefined) account.totalLosses = updates.totalLosses;
-    if (updates.currentWinStreak !== undefined) account.currentWinStreak = updates.currentWinStreak;
-    if (updates.bestWinStreak !== undefined) account.bestWinStreak = updates.bestWinStreak;
-    if (updates.totalGamesPlayed !== undefined) account.totalGamesPlayed = updates.totalGamesPlayed;
-    if (updates.totalMoneyWon !== undefined) account.totalMoneyWon = updates.totalMoneyWon;
-    if (updates.totalMoneyLost !== undefined) account.totalMoneyLost = updates.totalMoneyLost;
-    if (updates.totalLoaned !== undefined) account.totalLoaned = updates.totalLoaned;
-    account.lastUpdated = new Date().toISOString();
+    const result = await pool.query(
+      `UPDATE accounts SET
+        current_money = COALESCE($1, current_money),
+        total_wins = COALESCE($2, total_wins),
+        total_losses = COALESCE($3, total_losses),
+        current_win_streak = COALESCE($4, current_win_streak),
+        best_win_streak = COALESCE($5, best_win_streak),
+        total_games_played = COALESCE($6, total_games_played),
+        total_money_won = COALESCE($7, total_money_won),
+        total_money_lost = COALESCE($8, total_money_lost),
+        total_loaned = COALESCE($9, total_loaned),
+        last_updated = CURRENT_TIMESTAMP
+      WHERE account_id = $10
+      RETURNING *`,
+      [
+        currentMoney,
+        totalWins,
+        totalLosses,
+        currentWinStreak,
+        bestWinStreak,
+        totalGamesPlayed,
+        totalMoneyWon,
+        totalMoneyLost,
+        totalLoaned,
+        accountId
+      ]
+    );
 
-    saveData();
-
+    const account = result.rows[0];
     console.log(`Updated account: ${account.username}`);
-    res.json(account);
+    
+    res.json({
+      accountId: account.account_id,
+      username: account.username,
+      currentMoney: account.current_money,
+      totalWins: account.total_wins,
+      totalLosses: account.total_losses,
+      currentWinStreak: account.current_win_streak,
+      bestWinStreak: account.best_win_streak,
+      totalGamesPlayed: account.total_games_played,
+      totalMoneyWon: account.total_money_won,
+      totalMoneyLost: account.total_money_lost,
+      totalLoaned: account.total_loaned,
+      lastUpdated: account.last_updated
+    });
   } catch (error) {
     console.error('Error updating account:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -153,25 +216,17 @@ app.put('/api/accounts/:accountId', (req, res) => {
 });
 
 // Delete account (optional)
-app.delete('/api/accounts/:accountId', (req, res) => {
+app.delete('/api/accounts/:accountId', async (req, res) => {
   try {
     const { accountId } = req.params;
+    const result = await pool.query(
+      'DELETE FROM accounts WHERE account_id = $1 RETURNING *',
+      [accountId]
+    );
     
-    // Find and delete account by accountId
-    let foundKey = null;
-    for (const [key, account] of Object.entries(accounts)) {
-      if (account.accountId === accountId) {
-        foundKey = key;
-        break;
-      }
-    }
-
-    if (!foundKey) {
+    if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Account not found' });
     }
-
-    delete accounts[foundKey];
-    saveData();
 
     res.json({ message: 'Account deleted successfully' });
   } catch (error) {
@@ -197,4 +252,3 @@ app.listen(PORT, () => {
   console.log(`  POST /api/accounts - Create new account`);
   console.log(`  PUT  /api/accounts/:accountId - Update account`);
 });
-
