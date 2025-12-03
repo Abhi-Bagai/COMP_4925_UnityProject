@@ -10,6 +10,15 @@ public class BettingUI : MonoBehaviour
     public Button increaseBetButton;
     public Button decreaseBetButton;
 
+    [Header("Preset Bet Buttons")]
+    public Button bet10Button;
+    public Button bet25Button;
+    public Button bet50Button;
+    public Button bet100Button;
+    public Button bet250Button;
+    public Button bet500Button;
+    public Button bet1000Button;
+
     [Header("Bet Buttons")]
     public Button place4Button;
     public Button place5Button;
@@ -55,6 +64,15 @@ public class BettingUI : MonoBehaviour
             Debug.LogWarning("Decrease Bet Button is not assigned in BettingUI!");
         }
 
+        // Connect preset bet amount buttons
+        ConnectPresetBetButton(bet10Button, 10);
+        ConnectPresetBetButton(bet25Button, 25);
+        ConnectPresetBetButton(bet50Button, 50);
+        ConnectPresetBetButton(bet100Button, 100);
+        ConnectPresetBetButton(bet250Button, 250);
+        ConnectPresetBetButton(bet500Button, 500);
+        ConnectPresetBetButton(bet1000Button, 1000);
+
         // Connect bet type buttons
         ConnectBetButton(place4Button, BetType.Place4);
         ConnectBetButton(place5Button, BetType.Place5);
@@ -96,6 +114,27 @@ public class BettingUI : MonoBehaviour
         if (button != null)
         {
             button.onClick.AddListener(() => OnPlaceBet(betType));
+        }
+    }
+
+    private void ConnectPresetBetButton(Button button, int amount)
+    {
+        if (button != null)
+        {
+            button.onClick.AddListener(() => OnSetBetAmount(amount));
+        }
+    }
+
+    /// <summary>
+    /// Sets the bet amount to a preset value
+    /// </summary>
+    private void OnSetBetAmount(int amount)
+    {
+        if (CrapsGameManager.Instance != null)
+        {
+            CrapsGameManager.Instance.SetBetAmount(amount);
+            Debug.Log($"Bet amount set to: ${amount}");
+            UpdateBetAmountDisplay();
         }
     }
 

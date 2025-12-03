@@ -189,6 +189,15 @@ public class CrapsGameManager : MonoBehaviour
     /// </summary>
     public int GetCurrentBetAmount() => currentBetAmount;
 
+    /// <summary>
+    /// Sets the bet amount to a specific value (clamped to min/max)
+    /// </summary>
+    public void SetBetAmount(int amount)
+    {
+        currentBetAmount = Mathf.Clamp(amount, minBetAmount, maxBetAmount);
+        UpdateUI();
+    }
+
     #endregion
 
     #region Bet Placement
